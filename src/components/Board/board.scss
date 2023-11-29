@@ -1,0 +1,49 @@
+.board {
+  &__wrapper {
+    min-width: 350px;
+    min-height: 450px;
+    margin-top: 20px;
+  }
+  &__container {
+    min-width: 350px;
+    min-height: 450px;
+    border: 1px solid #f44336;
+
+    &--green {
+      border-color: #4caf50;
+    }
+
+    &--orange {
+      border-color: #ff9800;
+    }
+
+    &--red {
+      border-color: #f44336;
+    }
+  }
+
+  &__title {
+    text-align: center;
+    margin: 0;
+    padding: 5px;
+    background-color: #f44336;
+
+    &--green {
+      background-color: #4caf50;
+    }
+
+    &--orange {
+      background-color: #ff9800;
+    }
+
+    &--red {
+      background-color: #f44336;
+    }
+
+    h3 {
+      margin: 0;
+      padding: 0;
+      color: white;
+    }
+  }
+}
