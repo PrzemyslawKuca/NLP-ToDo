@@ -1,46 +1,40 @@
 import { DragDropContext, Droppable } from "react-beautiful-dnd";
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import Board from "../Board/Board";
 import "./boardsContainer.scss";
 import BoardsContext from "../../context/BoardsContext";
 
-function BoardsContainer() {
+const BoardsContainer: React.FC = () => {
   const { data, setData } = useContext(BoardsContext);
 
   const handleDragAndDrop = (results: any) => {
     const { source, destination, type } = results;
 
-    if (!destination) return;
+    if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) {
+      return;
+    }
 
-    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+    const sourceStoreIndex = data.findIndex((store) => store.id === source.droppableId);
+    const destinationStoreIndex = data.findIndex((store) => store.id === destination.droppableId);
 
     if (type === "group") {
-      const reordereddata = [...data];
-      const dataourceIndex = data.findIndex((store) => store.id === source.droppableId);
-      const storeDestinationIndex = data.findIndex((store) => store.id === destination.droppableId);
-
-      const [removedStore] = reordereddata.splice(dataourceIndex, 1);
-      reordereddata.splice(storeDestinationIndex, 0, removedStore);
-
-      setData(reordereddata);
+      const reorderedData = Array.from(data);
+      const [removedStore] = reorderedData.splice(sourceStoreIndex, 1);
+      reorderedData.splice(destinationStoreIndex, 0, removedStore);
+      setData(reorderedData);
     } else {
-      const { droppableId: sourceId, index: sourceIndex } = source;
-      const { droppableId: destinationId, index: destinationIndex } = destination;
+      const sourceItems = Array.from(data[sourceStoreIndex].items);
+      const destinationItems =
+        source.droppableId !== destination.droppableId ? Array.from(data[destinationStoreIndex].items) : sourceItems;
 
-      const sourceStoreIndex = data.findIndex((store) => store.id === sourceId);
-      const destinationStoreIndex = data.findIndex((store) => store.id === destinationId);
+      const [deletedItem] = sourceItems.splice(source.index, 1);
+      destinationItems.splice(destination.index, 0, deletedItem);
 
-      const sourceItems = [...data[sourceStoreIndex].items];
-      const destinationItems = sourceId !== destinationId ? [...data[destinationStoreIndex].items] : sourceItems;
+      const updatedData = Array.from(data);
+      updatedData[sourceStoreIndex] = { ...data[sourceStoreIndex], items: sourceItems };
+      updatedData[destinationStoreIndex] = { ...data[destinationStoreIndex], items: destinationItems };
 
-      const [deletedItem] = sourceItems.splice(sourceIndex, 1);
-      destinationItems.splice(destinationIndex, 0, deletedItem);
-
-      const updateddata = [...data];
-      updateddata[sourceStoreIndex] = { ...data[sourceStoreIndex], items: sourceItems };
-      updateddata[destinationStoreIndex] = { ...data[destinationStoreIndex], items: destinationItems };
-
-      setData(updateddata);
+      setData(updatedData);
     }
   };
 
@@ -49,7 +43,7 @@ function BoardsContainer() {
       <Droppable droppableId="ROOT" type="group">
         {(provided) => (
           <div {...provided.droppableProps} ref={provided.innerRef} className="store">
-            {data.map((store, index) => (
+            {data.map((store) => (
               <Board {...store} key={store.id} />
             ))}
             {provided.placeholder}
@@ -58,6 +52,6 @@ function BoardsContainer() {
       </Droppable>
     </DragDropContext>
   );
-}
+};
 
 export default BoardsContainer;

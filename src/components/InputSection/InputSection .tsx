@@ -6,8 +6,7 @@ import useBoards from "../../hooks/taskManagment";
 
 function InputSection() {
   const { addTask, moveTask, deleteTask } = useBoards();
-
-  const [transcription, setTransctiption] = useState<string>("");
+  const [transcription, setTranscription] = useState<string>("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
@@ -30,17 +29,16 @@ function InputSection() {
         audioChunks.push(event.data);
       };
 
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
         setAudioBlob(audioBlob);
 
-        sendAudioToServer(audioBlob).then((transcription: any) => {
-          if (transcription) {
-            setTransctiption(transcription);
-          } else {
-            console.log("No transcription available or an error occurred.");
-          }
-        });
+        const transcription = await sendAudioToServer(audioBlob);
+        if (transcription) {
+          setTranscription(transcription);
+        } else {
+          console.log("No transcription available or an error occurred.");
+        }
       };
 
       recorder.start();
@@ -57,26 +55,24 @@ function InputSection() {
     }
   };
 
-  const sendTranscriptionToServer = (prompt: string) => {
-    sendPromptToServer(prompt).then((interpretation: any) => {
-      console.log(interpretation);
+  const sendTranscriptionToServer = async (prompt: string) => {
+    const interpretation = await sendPromptToServer(prompt);
 
-      if (interpretation) {
-        switch (interpretation.type) {
-          case "CREATE":
-            addTask(interpretation);
-            break;
-          case "MOVE":
-            moveTask(interpretation);
-            break;
-          case "DELETE":
-            deleteTask(interpretation);
-            break;
-        }
-      } else {
-        console.log("No interpretation available or an error occurred.");
+    if (interpretation) {
+      switch (interpretation.type) {
+        case "CREATE":
+          addTask(interpretation);
+          break;
+        case "MOVE":
+          moveTask(interpretation);
+          break;
+        case "DELETE":
+          deleteTask(interpretation);
+          break;
       }
-    });
+    } else {
+      console.log("No interpretation available or an error occurred.");
+    }
   };
 
   return (
@@ -96,7 +92,7 @@ function InputSection() {
         size="small"
         value={transcription}
         onChange={(e) => {
-          setTransctiption(e.target.value);
+          setTranscription(e.target.value);
         }}
       />
       <Button

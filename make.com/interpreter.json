@@ -1,5 +1,5 @@
 {
-    "name": "Text to JSON",
+    "name": "Voice to Action",
     "flow": [
         {
             "id": 1,
@@ -18,10 +18,10 @@
                 "restore": {
                     "parameters": {
                         "hook": {
-                            "label": "text_to_json_webhook",
                             "data": {
                                 "editable": "true"
-                            }
+                            },
+                            "label": "text_to_action_webhook"
                         }
                     }
                 },
@@ -54,18 +54,20 @@
                 "__IMTCONN__": 588924
             },
             "mapper": {
-                "select": "chat",
                 "model": "gpt-4-1106-preview",
+                "select": "chat",
                 "messages": [
                     {
                         "role": "system",
-                        "content": "Based on the received text, which contains commands for a to-do list, return a response in JSON format. Use the following fields: type (CREATE, MOVE, DELETE), column (TO DO, IN PROGRESS, DONE), new_column (TODO, INPROGRESS, DONE, null), text (description of the task), id (task number or null). If the text does not pertain to a to-do list, return null in all fields. Respond directly in JSON format, without any additional formatting characters. "
+                        "content": "Based on the received text, which contains commands for a to-do list, return a response in JSON format. Use the following fields: type (CREATE, MOVE, DELETE), column (TO DO, IN PROGRESS, DONE), new_column (TO DO, IN PROGRESS, DONE, null), text (description of the task), id (task number or null). If the text does not pertain to a to-do list, return null in all fields. Respond directly in JSON format, without any additional formatting characters."
                     },
                     {
                         "role": "user",
                         "content": "{{1.message}}"
                     }
-                ]
+                ],
+                "temperature": "1",
+                "response_format": "text"
             },
             "metadata": {
                 "designer": {
@@ -73,28 +75,16 @@
                     "y": 150
                 },
                 "restore": {
-                    "parameters": {
-                        "__IMTCONN__": {
-                            "label": "My OpenAI connection",
-                            "data": {
-                                "scoped": "true",
-                                "connection": "openai-gpt-3"
-                            }
-                        }
-                    },
                     "expect": {
-                        "select": {
-                            "label": "Create a Chat Completion (GPT Models)"
-                        },
-                        "echo": {
-                            "mode": "chose"
-                        },
-                        "additionalParameters": {
+                        "stop": {
                             "mode": "chose"
                         },
                         "model": {
                             "mode": "chose",
                             "label": "gpt-4-1106-preview (System)"
+                        },
+                        "select": {
+                            "label": "Create a Chat Completion (GPT Models)"
                         },
                         "messages": {
                             "mode": "chose",
@@ -112,6 +102,25 @@
                                     }
                                 }
                             ]
+                        },
+                        "logit_bias": {
+                            "mode": "chose"
+                        },
+                        "response_format": {
+                            "mode": "chose",
+                            "label": "Text"
+                        },
+                        "additionalParameters": {
+                            "mode": "chose"
+                        }
+                    },
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "data": {
+                                "scoped": "true",
+                                "connection": "openai-gpt-3"
+                            },
+                            "label": "My OpenAI connection"
                         }
                     }
                 },
@@ -165,14 +174,76 @@
                         "label": "Number"
                     },
                     {
-                        "name": "echo",
-                        "type": "boolean",
-                        "label": "Echo"
+                        "name": "frequency_penalty",
+                        "type": "number",
+                        "label": "Frequency Penalty",
+                        "validate": {
+                            "max": 2,
+                            "min": -2
+                        }
+                    },
+                    {
+                        "name": "presence_penalty",
+                        "type": "number",
+                        "label": "Presence Penalty",
+                        "validate": {
+                            "max": 2,
+                            "min": -2
+                        }
+                    },
+                    {
+                        "name": "logit_bias",
+                        "spec": [
+                            {
+                                "name": "token",
+                                "type": "text",
+                                "label": "Token",
+                                "required": true
+                            },
+                            {
+                                "name": "probability",
+                                "type": "number",
+                                "label": "Probability",
+                                "required": true,
+                                "validate": {
+                                    "max": 100,
+                                    "min": -100
+                                }
+                            }
+                        ],
+                        "type": "array",
+                        "label": "Token Probability"
+                    },
+                    {
+                        "name": "response_format",
+                        "type": "select",
+                        "label": "Response Format",
+                        "validate": {
+                            "enum": [
+                                "text",
+                                "json_object"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "seed",
+                        "type": "integer",
+                        "label": "Seed"
+                    },
+                    {
+                        "name": "stop",
+                        "spec": {
+                            "name": "value",
+                            "type": "text"
+                        },
+                        "type": "array",
+                        "label": "Stop Sequences",
+                        "validate": {
+                            "maxItems": 4
+                        }
                     },
                     {
                         "name": "additionalParameters",
-                        "type": "array",
-                        "label": "Other Input Parameters",
                         "spec": [
                             {
                                 "name": "key",
@@ -243,7 +314,9 @@
                                     }
                                 ]
                             }
-                        ]
+                        ],
+                        "type": "array",
+                        "label": "Other Input Parameters"
                     },
                     {
                         "name": "model",
@@ -253,9 +326,6 @@
                     },
                     {
                         "name": "messages",
-                        "type": "array",
-                        "label": "Messages",
-                        "required": true,
                         "spec": [
                             {
                                 "name": "role",
@@ -282,7 +352,10 @@
                                 "type": "text",
                                 "label": "Message Content"
                             }
-                        ]
+                        ],
+                        "type": "array",
+                        "label": "Messages",
+                        "required": true
                     }
                 ]
             },
@@ -293,8 +366,8 @@
                     "version": 1,
                     "parameters": {},
                     "mapper": {
-                        "status": "500",
-                        "body": "{{4.error}}",
+                        "body": "",
+                        "status": "200",
                         "headers": []
                     },
                     "metadata": {
@@ -314,10 +387,10 @@
                                 "name": "status",
                                 "type": "uinteger",
                                 "label": "Status",
+                                "required": true,
                                 "validate": {
                                     "min": 100
-                                },
-                                "required": true
+                                }
                             },
                             {
                                 "name": "body",
@@ -326,16 +399,11 @@
                             },
                             {
                                 "name": "headers",
-                                "type": "array",
-                                "label": "Custom headers",
-                                "validate": {
-                                    "maxItems": 16
-                                },
                                 "spec": [
                                     {
                                         "name": "key",
-                                        "label": "Key",
                                         "type": "text",
+                                        "label": "Key",
                                         "required": true,
                                         "validate": {
                                             "max": 256
@@ -343,14 +411,19 @@
                                     },
                                     {
                                         "name": "value",
-                                        "label": "Value",
                                         "type": "text",
+                                        "label": "Value",
                                         "required": true,
                                         "validate": {
                                             "max": 4096
                                         }
                                     }
-                                ]
+                                ],
+                                "type": "array",
+                                "label": "Custom headers",
+                                "validate": {
+                                    "maxItems": 16
+                                }
                             }
                         ]
                     }
@@ -418,8 +491,8 @@
             "version": 1,
             "parameters": {},
             "mapper": {
-                "status": "200",
                 "body": "{{5.json}}",
+                "status": "200",
                 "headers": []
             },
             "metadata": {
@@ -439,10 +512,10 @@
                         "name": "status",
                         "type": "uinteger",
                         "label": "Status",
+                        "required": true,
                         "validate": {
                             "min": 100
-                        },
-                        "required": true
+                        }
                     },
                     {
                         "name": "body",
@@ -451,16 +524,11 @@
                     },
                     {
                         "name": "headers",
-                        "type": "array",
-                        "label": "Custom headers",
-                        "validate": {
-                            "maxItems": 16
-                        },
                         "spec": [
                             {
                                 "name": "key",
-                                "label": "Key",
                                 "type": "text",
+                                "label": "Key",
                                 "required": true,
                                 "validate": {
                                     "max": 256
@@ -468,14 +536,19 @@
                             },
                             {
                                 "name": "value",
-                                "label": "Value",
                                 "type": "text",
+                                "label": "Value",
                                 "required": true,
                                 "validate": {
                                     "max": 4096
                                 }
                             }
-                        ]
+                        ],
+                        "type": "array",
+                        "label": "Custom headers",
+                        "validate": {
+                            "maxItems": 16
+                        }
                     }
                 ]
             }

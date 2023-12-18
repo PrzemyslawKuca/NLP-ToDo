@@ -1,12 +1,12 @@
 {
-    "name": "Voice to Text",
+    "name": "Voice to Action",
     "flow": [
         {
             "id": 1,
             "module": "gateway:CustomWebHook",
             "version": 1,
             "parameters": {
-                "hook": 233273,
+                "hook": 234016,
                 "maxResults": 1
             },
             "mapper": {},
@@ -18,10 +18,10 @@
                 "restore": {
                     "parameters": {
                         "hook": {
-                            "label": "voice_to_text_webhook",
                             "data": {
                                 "editable": "true"
-                            }
+                            },
+                            "label": "text_to_action_webhook"
                         }
                     }
                 },
@@ -40,63 +40,34 @@
                 ],
                 "interface": [
                     {
-                        "name": "model",
+                        "name": "message",
                         "type": "text"
-                    },
-                    {
-                        "name": "file",
-                        "type": "collection",
-                        "spec": [
-                            {
-                                "name": "name",
-                                "type": "text"
-                            },
-                            {
-                                "name": "mime",
-                                "type": "text"
-                            },
-                            {
-                                "name": "data",
-                                "type": "buffer"
-                            },
-                            {
-                                "name": "files",
-                                "type": "array",
-                                "spec": {
-                                    "type": "collection",
-                                    "spec": [
-                                        {
-                                            "name": "name",
-                                            "type": "text"
-                                        },
-                                        {
-                                            "name": "mime",
-                                            "type": "text"
-                                        },
-                                        {
-                                            "name": "data",
-                                            "type": "buffer"
-                                        }
-                                    ]
-                                }
-                            }
-                        ]
                     }
                 ]
             }
         },
         {
-            "id": 3,
-            "module": "openai-gpt-3:CreateTranslation",
+            "id": 4,
+            "module": "openai-gpt-3:CreateCompletion",
             "version": 1,
             "parameters": {
                 "__IMTCONN__": 588924
             },
             "mapper": {
-                "fileName": "{{1.file.name}}",
-                "fileData": "{{1.file.data}}",
-                "model": "whisper-1",
-                "prompt": "Create a tanscription"
+                "select": "chat",
+                "temperature": "1",
+                "response_format": "text",
+                "model": "gpt-4-1106-preview",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "Based on the received text, which contains commands for a to-do list, return a response in JSON format. Use the following fields: type (CREATE, MOVE, DELETE), column (To Do, In Progress, Done), new_column (To Do, In Progress, Done, null), text (description of the task), id (task number or null). If the text does not pertain to a to-do list, return null in all fields. Respond directly in JSON format, without any additional formatting characters."
+                    },
+                    {
+                        "role": "user",
+                        "content": "{{1.message}}"
+                    }
+                ]
             },
             "metadata": {
                 "designer": {
@@ -114,9 +85,42 @@
                         }
                     },
                     "expect": {
+                        "select": {
+                            "label": "Create a Chat Completion (GPT Models)"
+                        },
+                        "logit_bias": {
+                            "mode": "chose"
+                        },
+                        "response_format": {
+                            "mode": "chose",
+                            "label": "Text"
+                        },
+                        "stop": {
+                            "mode": "chose"
+                        },
+                        "additionalParameters": {
+                            "mode": "chose"
+                        },
                         "model": {
                             "mode": "chose",
-                            "label": "Whisper-1"
+                            "label": "gpt-4-1106-preview (System)"
+                        },
+                        "messages": {
+                            "mode": "chose",
+                            "items": [
+                                {
+                                    "role": {
+                                        "mode": "chose",
+                                        "label": "System"
+                                    }
+                                },
+                                {
+                                    "role": {
+                                        "mode": "chose",
+                                        "label": "User"
+                                    }
+                                }
+                            ]
                         }
                     }
                 },
@@ -130,53 +134,240 @@
                 ],
                 "expect": [
                     {
-                        "name": "fileName",
-                        "type": "filename",
-                        "label": "File Name",
-                        "required": true
-                    },
-                    {
-                        "name": "fileData",
-                        "type": "buffer",
-                        "label": "File Data",
-                        "required": true
-                    },
-                    {
-                        "name": "model",
+                        "name": "select",
                         "type": "select",
-                        "label": "Model",
+                        "label": "Select Method",
                         "required": true,
                         "validate": {
                             "enum": [
-                                "whisper-1"
+                                "chat",
+                                "prompt"
                             ]
                         }
                     },
                     {
-                        "name": "prompt",
-                        "type": "text",
-                        "label": "Prompt"
+                        "name": "max_tokens",
+                        "type": "number",
+                        "label": "Max Tokens"
                     },
                     {
                         "name": "temperature",
                         "type": "number",
                         "label": "Temperature",
                         "validate": {
+                            "max": 2,
+                            "min": 0
+                        }
+                    },
+                    {
+                        "name": "top_p",
+                        "type": "number",
+                        "label": "Top P",
+                        "validate": {
                             "max": 1,
                             "min": 0
                         }
+                    },
+                    {
+                        "name": "n_completions",
+                        "type": "number",
+                        "label": "Number"
+                    },
+                    {
+                        "name": "frequency_penalty",
+                        "type": "number",
+                        "label": "Frequency Penalty",
+                        "validate": {
+                            "max": 2,
+                            "min": -2
+                        }
+                    },
+                    {
+                        "name": "presence_penalty",
+                        "type": "number",
+                        "label": "Presence Penalty",
+                        "validate": {
+                            "max": 2,
+                            "min": -2
+                        }
+                    },
+                    {
+                        "name": "logit_bias",
+                        "type": "array",
+                        "label": "Token Probability",
+                        "spec": [
+                            {
+                                "name": "token",
+                                "type": "text",
+                                "label": "Token",
+                                "required": true
+                            },
+                            {
+                                "name": "probability",
+                                "type": "number",
+                                "label": "Probability",
+                                "required": true,
+                                "validate": {
+                                    "max": 100,
+                                    "min": -100
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "name": "response_format",
+                        "type": "select",
+                        "label": "Response Format",
+                        "validate": {
+                            "enum": [
+                                "text",
+                                "json_object"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "seed",
+                        "type": "integer",
+                        "label": "Seed"
+                    },
+                    {
+                        "name": "stop",
+                        "type": "array",
+                        "label": "Stop Sequences",
+                        "validate": {
+                            "maxItems": 4
+                        },
+                        "spec": {
+                            "type": "text",
+                            "name": "value"
+                        }
+                    },
+                    {
+                        "name": "additionalParameters",
+                        "type": "array",
+                        "label": "Other Input Parameters",
+                        "spec": [
+                            {
+                                "name": "key",
+                                "type": "text",
+                                "label": "Parameter Name",
+                                "required": true
+                            },
+                            {
+                                "name": "type",
+                                "type": "select",
+                                "label": "Input Type",
+                                "options": [
+                                    {
+                                        "label": "Text",
+                                        "value": "text",
+                                        "nested": [
+                                            {
+                                                "name": "value",
+                                                "type": "text",
+                                                "label": "Parameter Value"
+                                            }
+                                        ],
+                                        "default": true
+                                    },
+                                    {
+                                        "label": "Number",
+                                        "value": "number",
+                                        "nested": [
+                                            {
+                                                "name": "value",
+                                                "type": "number",
+                                                "label": "Parameter Value"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "label": "Boolean",
+                                        "value": "boolean",
+                                        "nested": [
+                                            {
+                                                "name": "value",
+                                                "type": "boolean",
+                                                "label": "Parameter Value"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "label": "Date",
+                                        "value": "date",
+                                        "nested": [
+                                            {
+                                                "name": "value",
+                                                "type": "date",
+                                                "label": "Parameter Value"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "label": "Any",
+                                        "value": "any",
+                                        "nested": [
+                                            {
+                                                "name": "value",
+                                                "type": "any",
+                                                "label": "Parameter Value"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "model",
+                        "type": "select",
+                        "label": "Model",
+                        "required": true
+                    },
+                    {
+                        "name": "messages",
+                        "type": "array",
+                        "label": "Messages",
+                        "required": true,
+                        "spec": [
+                            {
+                                "name": "role",
+                                "type": "select",
+                                "label": "Role",
+                                "options": [
+                                    {
+                                        "label": "System",
+                                        "value": "system"
+                                    },
+                                    {
+                                        "label": "User",
+                                        "value": "user"
+                                    },
+                                    {
+                                        "label": "Assistant",
+                                        "value": "assistant"
+                                    }
+                                ],
+                                "required": true
+                            },
+                            {
+                                "name": "content",
+                                "type": "text",
+                                "label": "Message Content"
+                            }
+                        ]
                     }
                 ]
             },
             "onerror": [
                 {
-                    "id": 7,
+                    "id": 8,
                     "module": "gateway:WebhookRespond",
                     "version": 1,
                     "parameters": {},
                     "mapper": {
-                        "status": "500",
-                        "body": "{{3.error}}",
+                        "body": "",
+                        "status": "200",
                         "headers": []
                     },
                     "metadata": {
@@ -196,10 +387,10 @@
                                 "name": "status",
                                 "type": "uinteger",
                                 "label": "Status",
+                                "required": true,
                                 "validate": {
                                     "min": 100
-                                },
-                                "required": true
+                                }
                             },
                             {
                                 "name": "body",
@@ -208,16 +399,11 @@
                             },
                             {
                                 "name": "headers",
-                                "type": "array",
-                                "label": "Custom headers",
-                                "validate": {
-                                    "maxItems": 16
-                                },
                                 "spec": [
                                     {
                                         "name": "key",
-                                        "label": "Key",
                                         "type": "text",
+                                        "label": "Key",
                                         "required": true,
                                         "validate": {
                                             "max": 256
@@ -225,14 +411,19 @@
                                     },
                                     {
                                         "name": "value",
-                                        "label": "Value",
                                         "type": "text",
+                                        "label": "Value",
                                         "required": true,
                                         "validate": {
                                             "max": 4096
                                         }
                                     }
-                                ]
+                                ],
+                                "type": "array",
+                                "label": "Custom headers",
+                                "validate": {
+                                    "maxItems": 16
+                                }
                             }
                         ]
                     }
@@ -240,7 +431,7 @@
             ]
         },
         {
-            "id": 11,
+            "id": 5,
             "module": "json:CreateJSON",
             "version": 1,
             "parameters": {
@@ -248,7 +439,7 @@
                 "space": ""
             },
             "mapper": {
-                "response": "{{3.text}}"
+                "response": "{{4.choices[].message.content}}"
             },
             "metadata": {
                 "designer": {
@@ -295,13 +486,13 @@
             }
         },
         {
-            "id": 12,
+            "id": 6,
             "module": "gateway:WebhookRespond",
             "version": 1,
             "parameters": {},
             "mapper": {
+                "body": "{{5.json}}",
                 "status": "200",
-                "body": "{{11.json}}",
                 "headers": []
             },
             "metadata": {
@@ -321,10 +512,10 @@
                         "name": "status",
                         "type": "uinteger",
                         "label": "Status",
+                        "required": true,
                         "validate": {
                             "min": 100
-                        },
-                        "required": true
+                        }
                     },
                     {
                         "name": "body",
@@ -333,16 +524,11 @@
                     },
                     {
                         "name": "headers",
-                        "type": "array",
-                        "label": "Custom headers",
-                        "validate": {
-                            "maxItems": 16
-                        },
                         "spec": [
                             {
                                 "name": "key",
-                                "label": "Key",
                                 "type": "text",
+                                "label": "Key",
                                 "required": true,
                                 "validate": {
                                     "max": 256
@@ -350,14 +536,19 @@
                             },
                             {
                                 "name": "value",
-                                "label": "Value",
                                 "type": "text",
+                                "label": "Value",
                                 "required": true,
                                 "validate": {
                                     "max": 4096
                                 }
                             }
-                        ]
+                        ],
+                        "type": "array",
+                        "label": "Custom headers",
+                        "validate": {
+                            "maxItems": 16
+                        }
                     }
                 ]
             }

@@ -2,60 +2,64 @@ import { useContext } from "react";
 import BoardsContext from "../context/BoardsContext";
 
 const useBoards = () => {
-  const { data, setData } = useContext(BoardsContext);
+  const { setData } = useContext(BoardsContext);
 
-  const addTask = (interpretation: any) => {
+  interface Interpretation {
+    column: string;
+    text: string;
+    new_column: string;
+  }
+
+  const addTask = (interpretation: Interpretation) => {
     setData((prevData) => {
       const newData = [...prevData];
-      const board = newData.find((board: any) => board.name.toLowerCase() === interpretation.column.toLowerCase());
+      const board = newData.find((board) => board.name.toLowerCase() === interpretation.column.toLowerCase());
       if (board) {
-        board.items.push({ id: generateUUID(), name: interpretation.text });
+        const newTask = { id: generateUUID(), name: interpretation.text };
+        board.items.push(newTask);
       }
-      console.log(newData);
       return newData;
     });
   };
 
-  const moveTask = (interpretation: any) => {
-    const board = data.find((board) => board.id === interpretation.boardId);
-    if (board) {
-      const task = board.items.find((task) => task.id === interpretation.taskId);
-      if (task) {
-        board.items = board.items.filter((task) => task.id !== interpretation.taskId);
-        const newBoard = data.find((board) => board.id === interpretation.newBoardId);
-        if (newBoard) {
-          newBoard.items.push(task);
+  const moveTask = (interpretation: Interpretation) => {
+    setData((prevData) => {
+      const newData = [...prevData];
+      const sourceBoard = newData.find((board) => board.name === interpretation.column);
+      const destinationBoard = newData.find((board) => board.name === interpretation.new_column);
+
+      if (sourceBoard && destinationBoard) {
+        const taskIndex = sourceBoard.items.findIndex((task) => task.name === interpretation.text);
+        if (taskIndex !== -1) {
+          const [task] = sourceBoard.items.splice(taskIndex, 1);
+          destinationBoard.items.push(task);
         }
       }
-    }
+      return newData;
+    });
   };
 
-  const deleteTask = (interpretation: any) => {
-    const board = data.find((board) => board.id === interpretation.boardId);
-    if (board) {
-      board.items = board.items.filter((task) => task.id !== interpretation.taskId);
-    }
+  const deleteTask = (interpretation: Interpretation) => {
+    setData((prevData) => {
+      const newData = prevData.map((board) => {
+        if (board.name === interpretation.column) {
+          const newItems = board.items.filter((task) => task.name.toLowerCase() !== interpretation.text.toLowerCase());
+          return { ...board, items: newItems };
+        }
+        return board;
+      });
+      return newData;
+    });
   };
   return { addTask, moveTask, deleteTask };
 };
 
 export default useBoards;
 
-function generateUUID() {
-  // Public Domain/MIT
-  var d = new Date().getTime(); //Timestamp
-  var d2 = (typeof performance !== "undefined" && performance.now && performance.now() * 1000) || 0; //Time in microseconds since page-load or 0 if unsupported
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    var r = Math.random() * 16; //random number between 0 and 16
-    if (d > 0) {
-      //Use timestamp until depleted
-      r = (d + r) % 16 | 0;
-      d = Math.floor(d / 16);
-    } else {
-      //Use microseconds since page-load if supported
-      r = (d2 + r) % 16 | 0;
-      d2 = Math.floor(d2 / 16);
-    }
-    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+function generateUUID(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
   });
 }
